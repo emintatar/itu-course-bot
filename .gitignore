@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+output.html
+debug_output.py
+test_scraper.py
