@@ -4,3 +4,4 @@ __pycache__/
 output.html
 debug_output.py
 test_scraper.py
+.env

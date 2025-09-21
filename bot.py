@@ -1,11 +1,15 @@
 # bot.py
+
 import os
+from dotenv import load_dotenv # YENİ EKLENEN SATIR
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
-from scraper import kontenjan_getir # Çalıştığını doğruladığımız scraper'ımız
+from scraper import kontenjan_getir
+
+load_dotenv() # YENİ EKLENEN SATIR
 
 # --- AYARLAR ---
 # Token'ı koddan kaldırıp, bunun yerine ortam değişkeninden okuyoruz
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN") 
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 # Kontrol sıklığı (saniye cinsinden). 60 = 1 dakika
 KONTROL_ARALIGI = 60 
 
@@ -20,39 +24,40 @@ CRN_GIR, BOLUM_GIR = range(2)
 # --- BOT KOMUTLARI ---
 
 def start(update, context):
+    # Bu fonksiyon /start komutuna cevap verir.
     update.message.reply_text(
-        "Merhaba! İTÜ Kontenjan Takip Botu'na hoş geldin.\n"
-        "Ders eklemek için /ekle komutunu kullanabilirsin.\n"
-        "Yardım için /help yazabilirsin."
+        "Merhaba Özgü! Ders seçimi maceranda sana yardımcı olmak için buradayım. 😊\n"
+        "Eklemek istediğin bir ders varsa /ekle komutunu kullanabilirsin."
     )
 
 def help_command(update, context):
+    # Bu fonksiyon /help komutuna cevap verir.
     update.message.reply_text(
-        "/ekle - Takip listene yeni bir ders ekler.\n"
-        "/liste - Takip ettiğin dersleri gösterir.\n"
-        "/sil <CRN> - Belirtilen CRN'i takip listenden siler.\n"
-        "/cancel - Devam eden bir işlemi iptal eder."
+        "İşte yapabildiklerim:\n\n"
+        "/ekle - Takip etmek istediğin yeni bir dersi listeye eklerim.\n"
+        "/liste - Hangi dersleri takip ettiğimizi gösteririm.\n"
+        "/sil <CRN> - Listeden bir dersi silerim.\n\n"
+        "Umarım aradığın dersi hemen bulursun! ✨"
     )
 
 def ekle_baslat(update, context):
-    update.message.reply_text("Yeni bir ders ekleyelim. Lütfen dersin 5 haneli CRN kodunu yaz.")
+    # /ekle sohbetini başlatır.
+    update.message.reply_text("Harika! Takip listene eklemek istediğin dersin 5 haneli CRN kodunu alabilir miyim?")
     return CRN_GIR
 
 def crn_al(update, context):
+    # Kullanıcıdan CRN'i alır.
     crn = update.message.text
     if not crn.isdigit() or len(crn) != 5:
         update.message.reply_text("Geçersiz CRN. Lütfen 5 haneli bir sayı gir.")
-        return CRN_GIR # Aynı adımda kal
+        return CRN_GIR
 
     context.user_data['crn'] = crn
-    update.message.reply_text(f"Anladım, CRN: {crn}. Şimdi bu dersin bölüm kodunu yaz. (Örn: MAT, ECN, END)")
+    update.message.reply_text(f"Süper, şimdi de bölüm kodunu rica edeyim. (Örn: END, MAT)")
     return BOLUM_GIR
 
-# bot.py dosyasında bu fonksiyonu bulup değiştirin:
-
-# bot.py dosyasında bu fonksiyonu bulup eski haline getirin:
-
 def bolum_al(update, context):
+    # Kullanıcıdan bölümü alır ve dersi kaydeder.
     bolum = update.message.text.upper()
     crn = context.user_data['crn']
     chat_id = update.message.chat_id
@@ -60,12 +65,10 @@ def bolum_al(update, context):
     if chat_id not in user_data:
         user_data[chat_id] = {}
     
-    # --- GERİ ALINAN SATIR ---
-    # Yeni dersi eklerken durumu tekrar "BILINMIYOR" olarak başlatıyoruz.
     user_data[chat_id][crn] = {'bolum': bolum, 'seviye': 'LISANS', 'son_durum': 'BILINMIYOR'}
 
-    update.message.reply_text(f"✅ Tamamdır! {bolum} bölümündeki {crn} CRN'li ders listeye eklendi.")
-    context.user_data.clear() # Geçici veriyi temizle
+    update.message.reply_text(f"İşte bu kadar! {bolum} bölümündeki {crn} CRN'li ders artık takibimde. Kontenjan açıldığı an sana haber vereceğim! 😉")
+    context.user_data.clear()
     return ConversationHandler.END
 
 def cancel(update, context):
@@ -74,12 +77,13 @@ def cancel(update, context):
     return ConversationHandler.END
 
 def liste(update, context):
+    # /liste komutuna cevap verir.
     chat_id = update.message.chat_id
     if chat_id not in user_data or not user_data[chat_id]:
-        update.message.reply_text("Takip listen boş.")
+        update.message.reply_text("Şu an takipte olduğumuz bir ders yok. Eklemek için /ekle yazabilirsin.")
         return
 
-    message = "Takip Listen:\n"
+    message = "Özgü, şu an takip ettiğimiz dersler şunlar:\n"
     for crn, data in user_data[chat_id].items():
         durum = data.get('son_durum', 'Henüz kontrol edilmedi')
         message += f"- CRN: {crn}, Bölüm: {data['bolum']}, Durum: {durum}\n"
@@ -87,6 +91,7 @@ def liste(update, context):
     update.message.reply_text(message)
 
 def sil(update, context):
+    # /sil komutuna cevap verir.
     chat_id = update.message.chat_id
     if not context.args:
         update.message.reply_text("Lütfen silmek istediğiniz CRN'i belirtin. Örneğin: /sil 12775")
@@ -96,7 +101,7 @@ def sil(update, context):
     
     if chat_id in user_data and crn_to_delete in user_data[chat_id]:
         del user_data[chat_id][crn_to_delete]
-        update.message.reply_text(f"{crn_to_delete} CRN'li ders takip listenden çıkarıldı.")
+        update.message.reply_text(f"{crn_to_delete} CRN'li dersi listeden çıkardım. Umarım ihtiyacın kalmamıştır! 👍")
     else:
         update.message.reply_text("Bu CRN takip listenizde bulunmuyor.")
 
@@ -105,27 +110,25 @@ def sil(update, context):
 # --- OTOMATİK KONTROL MEKANİZMASI (YENİ VERSİYON) ---
 
 def kontrol_et(context):
+    # Arka planda periyodik olarak çalışır ve bildirim gönderir.
     print("Periyodik kontrol çalışıyor...")
     if not user_data:
-        return # Takip edilen ders yoksa boşuna çalışma
+        return
 
-    # Tüm kullanıcıları ve derslerini döngüye al
     for chat_id, dersler in user_data.items():
         for crn, data in dersler.items():
             print(f"Kontrol ediliyor -> CRN: {crn}, Bölüm: {data['bolum']}")
             yeni_durum = kontenjan_getir(data['seviye'], data['bolum'], crn)
             
-            # --- DEĞİŞEN MANTIK ---
-            # Eğer derste yer varsa, her kontrol edildiğinde haber ver.
             if yeni_durum == "BOS":
                 context.bot.send_message(
                     chat_id=chat_id, 
-                    text=f"📢 {data['bolum']} bölümündeki {crn} CRN'li derste yer var!"
+                    text=f"Özgü, müjde! ✨ {data['bolum']} bölümündeki {crn} CRN'li derste kontenjan açıldı! Acele et, yerler dolmadan al! 🏃‍♀️"
                 )
             
-            # Son durumu her zaman güncelle (listenin güncel kalması için önemli)
             data['son_durum'] = yeni_durum
     print("Kontrol tamamlandı.")
+
 
 # --- BOTU BAŞLATAN ANA FONKSİYON ---
 
