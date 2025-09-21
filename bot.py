@@ -23,11 +23,14 @@ CRN_GIR, BOLUM_GIR = range(2)
 
 # --- BOT KOMUTLARI ---
 
+# bot.py dosyasında sadece bu fonksiyonu bul ve değiştir:
+
 def start(update, context):
     # Bu fonksiyon /start komutuna cevap verir.
     update.message.reply_text(
-        "Merhaba Özgü! Ders seçimi maceranda sana yardımcı olmak için buradayım. 😊\n"
-        "Eklemek istediğin bir ders varsa /ekle komutunu kullanabilirsin."
+        "Merhaba Özgü! Ders seçimi maceranda sana yardımcı olmak için buradayım. 😊\n\n"
+        "Eklemek istediğin bir ders varsa /ekle komutunu kullanabilirsin.\n"
+        "Tüm komutları görmek için /help yazabilirsin."
     )
 
 def help_command(update, context):
